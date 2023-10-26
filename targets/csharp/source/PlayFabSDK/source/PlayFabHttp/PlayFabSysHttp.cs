@@ -1,164 +1,171 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace PlayFab.Internal
 {
-    public class PlayFabSysHttp : ITransportPlugin
-    {
-        private readonly HttpClient _client = new HttpClient();
+	public class PlayFabSysHttp : ITransportPlugin
+	{
+		private readonly HttpClient _client = new();
 
-        public async Task<object> DoPost(string fullUrl, object request, Dictionary<string, string> extraHeaders)
-        {
-            await new PlayFabUtil.SynchronizationContextRemover();
+		public async Task<PlayFabResult<T>> DoPost<T>(string fullUrl, object? request,
+			Dictionary<string, string>? extraHeaders) where T : PlayFabResultCommon
+		{
+			await new PlayFabUtil.SynchronizationContextRemover();
 
-            var serializer = PluginManager.GetPlugin<ISerializerPlugin>(PluginContract.PlayFab_Serializer);
-            string bodyString;
+			var serializer = PluginManager.GetPlugin<ISerializerPlugin>(PluginContract.PlayFab_Serializer);
+			var bodyString = request is null ? "{}" : serializer.Serialize(request);
 
-            if (request == null)
-            {
-                bodyString = "{}";
-            }
-            else
-            {
-                bodyString = serializer.SerializeObject(request);
-            }
+			using var postBody = new StringContent(bodyString, Encoding.UTF8, "application/json");
 
-            HttpResponseMessage httpResponse;
-            string httpResponseString;
-            IEnumerable<string> requestId;
-            bool hasReqId = false;
-            using (var postBody = new ByteArrayContent(Encoding.UTF8.GetBytes(bodyString)))
-            {
-                postBody.Headers.Add("Content-Type", "application/json");
-                postBody.Headers.Add("X-PlayFabSDK", PlayFabSettings.SdkVersionString);
-                if (extraHeaders != null)
-                {
-                    foreach (var headerPair in extraHeaders)
-                    {
-                        // Special case for Authorization header
-                        if (headerPair.Key.Equals("Authorization", StringComparison.OrdinalIgnoreCase))
-                        {
-                            _client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", headerPair.Value);
-                        }
-                        else
-                        {
-                            postBody.Headers.Add(headerPair.Key, headerPair.Value);
-                        }
-                    }
-                }
+			postBody.Headers.Add("X-PlayFabSDK", PlayFabSettings.SdkVersionString);
+			if (extraHeaders is not null)
+			{
+				foreach (var headerPair in extraHeaders)
+				{
+					// Special case for Authorization header
+					if (headerPair.Key.Equals("Authorization", StringComparison.OrdinalIgnoreCase))
+					{
+						_client.DefaultRequestHeaders.Authorization =
+							new AuthenticationHeaderValue("Bearer", headerPair.Value);
+					}
+					else
+					{
+						postBody.Headers.Add(headerPair.Key, headerPair.Value);
+					}
+				}
+			}
 
-                try
-                {
-                    httpResponse = await _client.PostAsync(fullUrl, postBody);
-                    httpResponseString = await httpResponse.Content.ReadAsStringAsync();
-                    hasReqId = httpResponse.Headers.TryGetValues("X-RequestId", out requestId);
-                }
-                catch (HttpRequestException e)
-                {
-                    return new PlayFabError
-                    {
-                        Error = PlayFabErrorCode.ConnectionError,
-                        ErrorMessage = e.InnerException.Message
-                    };
-                }
-                catch (Exception e)
-                {
-                    return new PlayFabError
-                    {
-                        Error = PlayFabErrorCode.ConnectionError,
-                        ErrorMessage = e.Message
-                    };
-                }
-            }
+			try
+			{
+				var httpResponse = await _client.PostAsync(fullUrl, postBody);
+				return await ProcessResponse<T>(httpResponse, serializer);
+			}
+			catch (HttpRequestException e)
+			{
+				return CreateError<T>(new PlayFabError
+				{
+					Error = PlayFabErrorCode.ConnectionError,
+					ErrorMessage = e.InnerException?.Message ?? e.Message
+				});
+			}
+			catch (Exception e)
+			{
+				return CreateError<T>(new PlayFabError
+				{
+					Error = PlayFabErrorCode.ConnectionError,
+					ErrorMessage = e.Message
+				});
+			}
+		}
 
-            if (!httpResponse.IsSuccessStatusCode)
-            {
-                var error = new PlayFabError();
+		private static async Task<PlayFabResult<T>> ProcessResponse<T>(HttpResponseMessage httpResponse,
+			ISerializerPlugin serializer) where T : PlayFabResultCommon
+		{
+			await using var stream = await httpResponse.Content.ReadAsStreamAsync();
 
-                if (string.IsNullOrEmpty(httpResponseString))
-                {
-                    error.HttpCode = (int)httpResponse.StatusCode;
-                    error.HttpStatus = httpResponse.StatusCode.ToString();
-                    error.RequestId = GetRequestId(hasReqId, requestId);
-                    return error;
-                }
+			var requestId = GetRequestId(httpResponse);
 
-                PlayFabJsonError errorResult;
-                try
-                {
-                    errorResult = serializer.DeserializeObject<PlayFabJsonError>(httpResponseString);
-                }
-                catch (Exception e)
-                {
-                    error.HttpCode = (int)httpResponse.StatusCode;
-                    error.HttpStatus = httpResponse.StatusCode.ToString();
-                    error.Error = PlayFabErrorCode.JsonParseError;
-                    error.ErrorMessage = e.Message;
-                    error.RequestId = GetRequestId(hasReqId, requestId); ;
-                    return error;
-                }
+			if (httpResponse.IsSuccessStatusCode)
+			{
+				if (stream.Length == 0)
+				{
+					return CreateError<T>(new PlayFabError
+					{
+						Error = PlayFabErrorCode.Unknown,
+						ErrorMessage = "Internal server error",
+						RequestId = requestId
+					});
+				}
 
-                error.HttpCode = errorResult.code;
-                error.HttpStatus = errorResult.status;
-                error.Error = (PlayFabErrorCode)errorResult.errorCode;
-                error.ErrorMessage = errorResult.errorMessage;
-                error.RetryAfterSeconds = errorResult.retryAfterSeconds;
+				var playFabJsonSuccess = await serializer.DeserializeAsync<PlayFabJsonSuccess<T>>(stream);
+				if (playFabJsonSuccess is null)
+				{
+					return CreateError<T>(new PlayFabError
+					{
+						Error = PlayFabErrorCode.Unknown,
+						ErrorMessage = "Serialization issue",
+						RequestId = requestId
+					});
+				}
+				return new PlayFabResult<T> { Result = playFabJsonSuccess.data };
+			}
 
-                if (errorResult.errorDetails != null)
-                {
-                    error.ErrorDetails = new Dictionary<string, string[]>();
-                    foreach (var detail in errorResult.errorDetails)
-                    {
-                        error.ErrorDetails.Add(detail.Key, detail.Value);
-                    }
-                }
+			// In case of errors
+			if (stream.Length == 0)
+			{
+				return CreateError<T>(new PlayFabError
+				{
+					HttpCode = (int)httpResponse.StatusCode,
+					HttpStatus = httpResponse.StatusCode.ToString(),
+					RequestId = requestId
+				});
+			}
 
-                error.RequestId = GetRequestId(hasReqId, requestId); ;
+			try
+			{
+				var errorResult = await serializer.DeserializeAsync<PlayFabJsonError>(stream);
+				var error = new PlayFabError
+				{
+					HttpCode = errorResult.code,
+					HttpStatus = errorResult.status,
+					Error = (PlayFabErrorCode)errorResult.errorCode,
+					ErrorMessage = errorResult.errorMessage,
+					RetryAfterSeconds = errorResult.retryAfterSeconds,
+					RequestId = requestId
+				};
 
-                return error;
-            }
+				if (errorResult.errorDetails is not null)
+				{
+					error.ErrorDetails = new Dictionary<string, string[]>();
+					foreach (var detail in errorResult.errorDetails)
+					{
+						error.ErrorDetails.Add(detail.Key, detail.Value);
+					}
+				}
 
-            if (string.IsNullOrEmpty(httpResponseString))
-            {
-                return new PlayFabError
-                {
-                    Error = PlayFabErrorCode.Unknown,
-                    ErrorMessage = "Internal server error",
-                    RequestId = GetRequestId(hasReqId, requestId)
-                };
-            }
+				return CreateError<T>(error);
+			}
+			catch (Exception e)
+			{
+				return CreateError<T>(new PlayFabError
+				{
+					HttpCode = (int)httpResponse.StatusCode,
+					HttpStatus = httpResponse.StatusCode.ToString(),
+					Error = PlayFabErrorCode.JsonParseError,
+					ErrorMessage = e.Message,
+					RequestId = requestId
+				});
+			}
+		}
 
-            return httpResponseString;
-        }
+		private static string GetRequestId(HttpResponseMessage httpResponse)
+		{
+			const string defaultReqId = "NoRequestIdFound";
 
-        private string GetRequestId(bool hasReqId, IEnumerable<string> reqIdContainer)
-        {
-            const string defaultReqId = "NoRequestIdFound";
+			try
+			{
+				if (!httpResponse.Headers.TryGetValues("X-RequestId", out var requestId))
+				{
+					return defaultReqId;
+				}
 
-            if (!hasReqId)
-            {
-                return defaultReqId;
-            }
+				var reqId = requestId.FirstOrDefault();
+				if (string.IsNullOrEmpty(reqId))
+				{
+					reqId = defaultReqId;
+				}
 
-            try
-            {
-                string reqId = reqIdContainer.FirstOrDefault();
-                if (string.IsNullOrEmpty(reqId))
-                {
-                    reqId = defaultReqId;
-                }
+				return reqId;
+			}
+			catch (Exception e)
+			{
+				return "Failed to Enumerate RequestId. Exception message: " + e.Message;
+			}
+		}
 
-                return reqId;
-            }
-            catch (Exception e)
-            {
-                return "Failed to Enumerate RequestId. Exception message: " + e.Message;
-            }
-        }
-    }
+		private static PlayFabResult<T> CreateError<T>(PlayFabError error) where T : PlayFabResultCommon
+		{
+			return new PlayFabResult<T> { Error = error };
+		}
+	}
 }

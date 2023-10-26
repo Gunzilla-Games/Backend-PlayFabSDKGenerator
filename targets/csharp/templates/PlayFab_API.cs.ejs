@@ -9,12 +9,15 @@ using System;
 #pragma warning restore 0649
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace PlayFab
 {
 <%- generateApiSummary("    ", api, "description")
 %>    public static class PlayFab<%- api.name %>API
-    {<% if (hasClientOptions) { %>
+    {
+    <% if (hasClientOptions) { %>
         /// <summary>
         /// Verify client login.
         /// </summary>
@@ -43,27 +46,17 @@ namespace PlayFab
 %>
 <%- generateApiSummary("        ", apiCall, "summary")
 %><%- getDeprecationAttribute("        ", apiCall)
-%>        public static async Task<PlayFabResult<<%- apiCall.result %>>> <%- apiCall.name %>Async(<%- apiCall.request %> request, object customData = null, Dictionary<string, string> extraHeaders = null)
+%>        public static async Task<PlayFabResult<<%- apiCall.result %>>> <%- apiCall.name %>Async(<%- apiCall.request %> request, object? customData = null, Dictionary<string, string>? extraHeaders = null)
         {
             await new PlayFabUtil.SynchronizationContextRemover();
 
-            var requestContext = request?.AuthenticationContext ?? PlayFabSettings.staticPlayer;
+            var requestContext = request.AuthenticationContext ?? PlayFabSettings.staticPlayer;
             var requestSettings = PlayFabSettings.staticSettings;
 <%- getRequestActions("            ", apiCall, false) %>
 <%- getCustomApiLogic("            ", apiCall) %>
-            var httpResult = await PlayFabHttp.DoPost("<%- apiCall.url %>", request, <%- getAuthParams(apiCall) %>, extraHeaders);
-            if (httpResult is PlayFabError)
-            {
-                var error = (PlayFabError)httpResult;
-                PlayFabSettings.GlobalErrorHandler?.Invoke(error);
-                return new PlayFabResult<<%- apiCall.result %>> { Error = error, CustomData = customData };
-            }
-
-            var resultRawJson = (string)httpResult;
-            var resultData = PluginManager.GetPlugin<ISerializerPlugin>(PluginContract.PlayFab_Serializer).DeserializeObject<PlayFabJsonSuccess<<%- apiCall.result %>>>(resultRawJson);
-            var result = resultData.data;
-<%- getResultActions("            ", apiCall, api, false) %>
-            return new PlayFabResult<<%- apiCall.result %>> { Result = result, CustomData = customData };
+            var httpResult = await PlayFabHttp.DoPost<<%- apiCall.result %>>("<%- apiCall.url %>", request, <%- getAuthParams(apiCall, true) %>, extraHeaders, requestSettings);
+            httpResult.CustomData = customData;
+            return httpResult;
         }
 <% } %>}
 }

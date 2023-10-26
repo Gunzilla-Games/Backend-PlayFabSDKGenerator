@@ -1,0 +1,51 @@
+#if <%- getApiDefineFlag(api) %>
+
+using PlayFab.<%- api.name %>Models;
+using PlayFab.Internal;
+#pragma warning disable 0649
+using System;
+// This is required for the Obsolete Attribute flag
+//  which is not always present in all API's
+#pragma warning restore 0649
+using System.Collections.Generic;
+using System.Threading.Tasks;
+
+namespace PlayFab
+{
+<%- generateApiSummary("    ", api, "description")
+%>    public interface IPlayFab<%- api.name %>InstanceAPI
+    {
+
+<% if (hasClientOptions) { %>
+        /// <summary>
+        /// Verify client login.
+        /// </summary>
+        public bool IsClientLoggedIn();
+<% } %><% if (hasEntityTokenOptions) { %>
+        /// <summary>
+        /// Verify entity login.
+        /// </summary>
+        public bool IsEntityLoggedIn();
+<% } %>
+        /// <summary>
+        /// Clear the Client SessionToken which allows this Client to call API calls requiring login.
+        /// A new/fresh login will be required after calling this.
+        /// </summary>
+        public void ForgetAllCredentials();
+<% for(var i in api.calls) { var apiCall = api.calls[i];%>
+<%- generateApiSummary("        ", apiCall, "summary")
+%><%- getDeprecationAttribute("        ", apiCall)
+%>      Task<PlayFabResult<<%- apiCall.result %>>> <%- apiCall.name %>Async(<%- apiCall.request %> request, object? customData = null, Dictionary<string, string>? extraHeaders = null);
+<% if (apiCall.name == "WriteTelemetryEvents") {
+     %>
+
+        /// <summary>
+        /// Write batches of entity based events to as Telemetry events (bypass PlayStream) using a Telemetry Key. The namespace must be 'custom' or start
+        /// with 'custom.'
+        /// </summary>
+        <%- getDeprecationAttribute("        ", apiCall) 
+        %>Task<PlayFabResult<<%- apiCall.result %>>> <%- apiCall.name %>Async(<%- apiCall.request %> request, string telemetryKey, object? customData = null, Dictionary<string, string>? extraHeaders = null);
+ <% } %>
+<% } %>    }
+}
+#endif

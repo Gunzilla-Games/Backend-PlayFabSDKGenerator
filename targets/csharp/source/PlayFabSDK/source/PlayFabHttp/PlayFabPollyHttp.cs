@@ -1,14 +1,5 @@
 ﻿using Polly;
-using Polly.CircuitBreaker;
-using Polly.Retry;
-using Polly.Timeout;
 using Polly.Wrap;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
-using System.Threading.Tasks;
 
 namespace PlayFab.Internal
 {
@@ -16,12 +7,13 @@ namespace PlayFab.Internal
     /// A Polly wrapped version of PlayFab Transport plug in which used
     /// when making http requests to PlayFab Main Server.
     /// </summary>
-    public class PlayFabPollyHttp : PlayFabSysHttp, ITransportPlugin
+    public class PlayFabPollyHttp : ITransportPlugin
     {
         /// <summary>
         /// Http requests worth retrying
         /// </summary>
-        public HashSet<int> HttpStatusCodesWorthRetrying = new HashSet<int> {
+        public readonly HashSet<int> HttpStatusCodesWorthRetrying = new()
+        {
             408, //HttpStatusCode.RequestTimeout
             409, //HttpStatusCode.Conflict
             429, //HttpStatusCode.TooManyRequests
@@ -37,10 +29,12 @@ namespace PlayFab.Internal
         /// </summary>
         public string Name;
 
+        private readonly PlayFabSysHttp _playFabSysHttp;
+
         /// <summary>
         /// Gets the resilience policies defined.
         /// </summary>
-        public AsyncPolicyWrap<object> CommonResilience { get; private set; }
+        public AsyncPolicyWrap<PlayFabBaseResult> CommonResilience { get; private set; }
 
         /// <summary>
         /// Constructor for objects of type PollyTransportPlug.
@@ -57,16 +51,17 @@ namespace PlayFab.Internal
         /// </summary>
         public PlayFabPollyHttp()
         {
-            var jitterer = new Random();
+	        _playFabSysHttp = new PlayFabSysHttp();
+	        var jitter = new Random();
             var retryPolicy = Policy
                .Handle<Exception>()
-               .OrResult<object>(r => r != null && HttpStatusCodesWorthRetrying.Contains((r as PlayFabError).HttpCode))
+               .OrResult<PlayFabBaseResult>(r => r.Error != null && HttpStatusCodesWorthRetrying.Contains(r.Error.HttpCode))
                     .WaitAndRetryAsync(1,
                       retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))  // exponential back-off: 2, 4, 8 etc
-                                + TimeSpan.FromMilliseconds(jitterer.Next(0, 1000)));  // plus some jitter: up to 1 second
+                                + TimeSpan.FromMilliseconds(jitter.Next(0, 1000)));  // plus some jitter: up to 1 second
 
             var breakerPolicy = Policy.Handle<Exception>()
-                .OrResult<object>(r => r != null && HttpStatusCodesWorthRetrying.Contains((r as PlayFabError).HttpCode))
+                .OrResult<PlayFabBaseResult>(r => r.Error != null && HttpStatusCodesWorthRetrying.Contains(r.Error.HttpCode))
                 .AdvancedCircuitBreakerAsync(
                     failureThreshold: 0.25,
                     samplingDuration: TimeSpan.FromSeconds(5),
@@ -76,26 +71,20 @@ namespace PlayFab.Internal
             CommonResilience = breakerPolicy.WrapAsync(retryPolicy);
         }
 
-        /// <inheritdoc/>
-        public new async Task<object> DoPost(string fullPath, object request, Dictionary<string, string> headers)
+        public async Task<PlayFabResult<T>> DoPost<T>(string fullPath, object? request, Dictionary<string, string> headers) where T : PlayFabResultCommon
         {
-            object doPostResult = await CommonResilience
-                .ExecuteAsync(async () =>
-                {
-                    var result = await base.DoPost(fullPath, request, headers) as PlayFabError;
-                    return result;
-                });
+	        var executeAsync = await CommonResilience
+		        .ExecuteAsync(async () => await _playFabSysHttp.DoPost<T>(fullPath, request, headers));
 
-            return doPostResult;
+	        return (PlayFabResult<T>)executeAsync;
         }
 
         /// <summary>
         /// Overrides the Polly Policies to enforce.
         /// </summary>
-        /// <param name="retryPolicy">The retry policy to use.</param>
-        /// <param name="breakerPolicy">The circuit breaker policy to use.</param>
+        /// <param name="policy">The policy to use.</param>
         /// <exception cref="ArgumentNullException"> Thrown when retryPolicy and/or breakerPolicy is null.</exception>
-        public void OverridePolicies(AsyncPolicyWrap<object> policy)
+        public void OverridePolicies(AsyncPolicyWrap<PlayFabBaseResult> policy)
         {
             CommonResilience = policy;
         }

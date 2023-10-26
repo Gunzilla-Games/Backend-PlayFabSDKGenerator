@@ -1,17 +1,17 @@
-using System;
 using System.Collections.Concurrent;
 using PlayFab.Internal;
+using PlayFab.Json;
 
 namespace PlayFab
 {
     public class PluginManager
     {
-        private ConcurrentDictionary<Tuple<PluginContract, string>, IPlayFabPlugin> plugins = new ConcurrentDictionary<Tuple<PluginContract, string>, IPlayFabPlugin>();
+        private readonly ConcurrentDictionary<Tuple<PluginContract, string>, IPlayFabPlugin> _plugins = new();
 
         /// <summary>
         /// The singleton instance of plugin manager.
         /// </summary>
-        private static readonly PluginManager Instance = new PluginManager();
+        private static readonly PluginManager Instance = new();
 
         private PluginManager()
         {
@@ -44,24 +44,20 @@ namespace PlayFab
         private IPlayFabPlugin GetPluginInternal(PluginContract contract, string instanceName)
         {
             var key = new Tuple<PluginContract, string>(contract, instanceName);
-            IPlayFabPlugin plugin;
-            if (!this.plugins.TryGetValue(key, out plugin))
+            if (_plugins.TryGetValue(key, out var plugin))
             {
-                // Requested plugin is not in the cache, create the default one
-                switch (contract)
-                {
-                    case PluginContract.PlayFab_Serializer:
-                        plugin = this.CreatePlugin<PlayFab.Json.SimpleJsonInstance>();
-                        break;
-                    case PluginContract.PlayFab_Transport:
-                        plugin = this.CreatePlugin<PlayFabSysHttp>();
-                        break;
-                    default:
-                        throw new ArgumentException("This contract is not supported", nameof(contract));
-                }
-
-                this.plugins[key] = plugin;
+	            return plugin;
             }
+            
+            // Requested plugin is not in the cache, create the default one
+            plugin = contract switch
+            {
+	            PluginContract.PlayFab_Serializer => CreatePlugin<TextJsonSerializerPlugin>(),
+	            PluginContract.PlayFab_Transport => CreatePlugin<PlayFabSysHttp>(),
+	            _ => throw new ArgumentException("This contract is not supported", nameof(contract))
+            };
+
+            _plugins[key] = plugin ?? throw new ArgumentException("This contract wasn't created", nameof(contract));
 
             return plugin;
         }
@@ -74,12 +70,12 @@ namespace PlayFab
             }
 
             var key = new Tuple<PluginContract, string>(contract, instanceName);
-            this.plugins[key] = plugin;
+            _plugins[key] = plugin;
         }
 
-        private IPlayFabPlugin CreatePlugin<T>() where T : IPlayFabPlugin, new()
+        private IPlayFabPlugin? CreatePlugin<T>() where T : IPlayFabPlugin, new()
         {
-            return (IPlayFabPlugin)Activator.CreateInstance(typeof(T).AsType());
+            return (IPlayFabPlugin?)Activator.CreateInstance(typeof(T).AsType());
         }
     }
 }

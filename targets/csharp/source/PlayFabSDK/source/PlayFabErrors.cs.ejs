@@ -65,13 +65,13 @@ namespace PlayFab
 
     public class PlayFabBaseResult
     {
-        public object CustomData;
-        public PlayFabError Error;
+        public object? CustomData;
+        public PlayFabError? Error;
     }
 
     public class PlayFabResult<TResult> : PlayFabBaseResult where TResult : PlayFabResultCommon
     {
-        public TResult Result;
+        public TResult? Result;
     }
 
     public delegate void ErrorCallback(PlayFabError error);

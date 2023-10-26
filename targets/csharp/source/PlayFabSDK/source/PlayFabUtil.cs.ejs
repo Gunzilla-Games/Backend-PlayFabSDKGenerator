@@ -151,7 +151,7 @@ namespace PlayFab
                 if (!string.IsNullOrEmpty(eachLog.Message))
                     Sb.Append(" - ").Append(eachLog.Message);
                 if (eachLog.Data != null)
-                    Sb.Append("\n").Append(jsonPlugin.SerializeObject(eachLog.Data));
+                    Sb.Append("\n").Append(jsonPlugin.Serialize(eachLog.Data));
             }
             return Sb.ToString();
         }

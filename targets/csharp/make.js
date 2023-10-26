@@ -50,7 +50,7 @@ exports.makeCombinedAPI = function (apis, sourceDir, apiOutputDir) {
         }
     }
     
-    makeTests(locals, sourceDir, apiOutputDir);
+    // makeTests(locals, sourceDir, apiOutputDir);
 
     const xamarinOutputDir = path.join(rootOutputDir, "XamarinTestRunner");
     templatizeTree(locals, path.resolve(sourceDir, "XamarinTestRunner"), xamarinOutputDir);
@@ -144,6 +144,9 @@ function makeApi(api, sourceDir, apiOutputDir) {
     console.log("Generating C# " + api.name + "Instance library to " + apiOutputDir);
     var instTemplate = getCompiledTemplate(path.resolve(sourceDir, "templates/" + instTemplateName + ".cs.ejs"));
     writeFile(path.resolve(apiOutputDir, "source/PlayFab" + api.name + "InstanceAPI.cs"), instTemplate(locals));
+
+    var interfaceTemplate = getCompiledTemplate(path.resolve(sourceDir, "templates/" + instTemplateName + "Interface.cs.ejs"));
+    writeFile(path.resolve(apiOutputDir, "source/Interfaces/IPlayFab" + api.name + "InstanceAPI.cs"), interfaceTemplate(locals));
 }
 
 function makeTests(locals, sourceDir, outputDir){
@@ -185,7 +188,7 @@ function getMakeFieldOrProperty(datatype) {
     if (datatype.name === "ExecuteFunctionRequest"
         || datatype.name === "EntityKey"
         || datatype.name === "EntityRequest")
-        return "{ get; set; }";
+        return " { get; set; }";
     return ";";
 }
 
@@ -296,16 +299,9 @@ function getCustomApiLogic(tabbing, apiCall) {
             + tabbing + "    var baseUri = new System.Uri(localApiServerString);\n"
             + tabbing + "    var fullUri = new System.Uri(baseUri, \"" + apiCall.url + "\".TrimStart('/'));\n\n"
             + tabbing + "    // Duplicate code necessary to avoid changing all SDK methods to new convention\n"
-            + tabbing + "    var debugHttpResult = await PlayFabHttp.DoPostWithFullUri(fullUri.AbsoluteUri, request, " + getAuthParams(apiCall) + ", extraHeaders);\n"
-            + tabbing + "    if (debugHttpResult is PlayFabError debugError)\n"
-            + tabbing + "    {\n"
-            + tabbing + "        PlayFabSettings.GlobalErrorHandler?.Invoke(debugError);\n"
-            + tabbing + "        return new PlayFabResult<ExecuteFunctionResult> { Error = debugError, CustomData = customData };\n"
-            + tabbing + "    }\n\n"
-            + tabbing + "    var debugResultRawJson = (string) debugHttpResult;\n"
-            + tabbing + "    var debugResultData = PluginManager.GetPlugin<ISerializerPlugin>(PluginContract.PlayFab_Serializer).DeserializeObject<PlayFabJsonSuccess<ExecuteFunctionResult>>(debugResultRawJson);\n"
-            + tabbing + "    var debugResult = debugResultData.data;\n"
-            + tabbing + "    return new PlayFabResult<ExecuteFunctionResult> { Result = debugResult, CustomData = customData };\n"
+            + tabbing + "    var debugHttpResult = await PlayFabHttp.DoPostWithFullUri<ExecuteFunctionResult>(fullUri.AbsoluteUri, request, " + getAuthParams(apiCall) + ", extraHeaders);\n"
+            + tabbing + "    debugHttpResult.CustomData = customData;\n"
+            + tabbing + "    return debugHttpResult;\n"
             + tabbing + "}\n";
     }
     return "";

@@ -57,8 +57,8 @@ namespace PlayFab.Internal
                .Handle<Exception>()
                .OrResult<PlayFabBaseResult>(r => r.Error != null && HttpStatusCodesWorthRetrying.Contains(r.Error.HttpCode))
                     .WaitAndRetryAsync(1,
-                      retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))  // exponential back-off: 2, 4, 8 etc
-                                + TimeSpan.FromMilliseconds(jitter.Next(0, 1000)));  // plus some jitter: up to 1 second
+                      retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt - 1))  // exponential back-off: 1, 2, 4, 8 etc
+                                + TimeSpan.FromMilliseconds(jitter.Next(0, 500)));  // plus some jitter: up to 500 ms
 
             var breakerPolicy = Policy.Handle<Exception>()
                 .OrResult<PlayFabBaseResult>(r => r.Error != null && HttpStatusCodesWorthRetrying.Contains(r.Error.HttpCode))

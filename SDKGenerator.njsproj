@@ -117,23 +117,19 @@
     <Content Include="targets\csharp\source\PlayFabSDK\PlayFabSDK+Unit.sln.ejs" />
     <Content Include="targets\csharp\source\PlayFabSDK\PlayFabSDK.sln.ejs" />
     <Content Include="targets\csharp\source\PlayFabSDK\Properties\AssemblyInfo.cs" />
-    <Content Include="targets\csharp\source\PlayFabSDK\source\IPlayFabPlugin.cs" />
-    <Content Include="targets\csharp\source\PlayFabSDK\source\ISerializerPlugin.cs" />
-    <Content Include="targets\csharp\source\PlayFabSDK\source\ITransportPlugin.cs" />
-    <Content Include="targets\csharp\source\PlayFabSDK\source\Json\ISerializer.cs" />
-    <Content Include="targets\csharp\source\PlayFabSDK\source\Json\NewtonsoftWrapper.cs" />
-    <Content Include="targets\csharp\source\PlayFabSDK\source\Json\SimpleJson.cs" />
+    <Content Include="targets\csharp\source\PlayFabSDK\source\Interfaces\IPlayFabPlugin.cs" />
+    <Content Include="targets\csharp\source\PlayFabSDK\source\Interfaces\ISerializerPlugin.cs" />
+    <Content Include="targets\csharp\source\PlayFabSDK\source\Interfaces\ITransportPlugin.cs" />
+    <Content Include="targets\csharp\source\PlayFabSDK\source\Interfaces\PluginContract.cs" />
+    <Content Include="targets\csharp\source\PlayFabSDK\source\Manager\PluginManager.cs" />
     <Content Include="targets\csharp\source\PlayFabSDK\source\PlayFabApiSettings.cs.ejs" />
     <Content Include="targets\csharp\source\PlayFabSDK\source\PlayFabAuthenticationContext.cs" />
     <Content Include="targets\csharp\source\PlayFabSDK\source\PlayFabErrors.cs.ejs" />
-    <Content Include="targets\csharp\source\PlayFabSDK\source\PlayFabHttp\IPlayFabHttp.cs" />
     <Content Include="targets\csharp\source\PlayFabSDK\source\PlayFabHttp\PlayFabHttp.cs" />
     <Content Include="targets\csharp\source\PlayFabSDK\source\PlayFabHttp\PlayFabSysHttp.cs" />
     <Content Include="targets\csharp\source\PlayFabSDK\source\PlayFabSDK.csproj.ejs" />
     <Content Include="targets\csharp\source\PlayFabSDK\source\PlayFabSettings.cs.ejs" />
     <Content Include="targets\csharp\source\PlayFabSDK\source\PlayFabUtil.cs.ejs" />
-    <Content Include="targets\csharp\source\PlayFabSDK\source\PluginContract.cs" />
-    <Content Include="targets\csharp\source\PlayFabSDK\source\PluginManager.cs" />
     <Content Include="targets\csharp\source\PlayFabSDK\source\Properties\AssemblyInfo.cs" />
     <Content Include="targets\csharp\source\PlayFabSDK\source\Qos\IRegionPinger.cs" />
     <Content Include="targets\csharp\source\PlayFabSDK\source\Qos\PlayFabQosApi.cs" />
@@ -141,19 +137,6 @@
     <Content Include="targets\csharp\source\PlayFabSDK\source\Qos\QosRegionResult.cs" />
     <Content Include="targets\csharp\source\PlayFabSDK\source\Qos\QosResult.cs" />
     <Content Include="targets\csharp\source\PlayFabSDK\source\Qos\RegionPinger.cs" />
-    <Content Include="targets\csharp\source\PlayFabSDK\source\Uunit\PluginManagerTest.cs" />
-    <Content Include="targets\csharp\source\PlayFabSDK\source\Uunit\tests\HttpTests.cs" />
-    <Content Include="targets\csharp\source\PlayFabSDK\source\Uunit\tests\InstanceAuthTests.cs" />
-    <Content Include="targets\csharp\source\PlayFabSDK\source\Uunit\tests\PlayFabApiTest.cs" />
-    <Content Include="targets\csharp\source\PlayFabSDK\source\Uunit\tests\PlayFabQosApiTest.cs" />
-    <Content Include="targets\csharp\source\PlayFabSDK\source\Uunit\tests\PlayFabServerApiTest.cs" />
-    <Content Include="targets\csharp\source\PlayFabSDK\source\Uunit\tests\Utility\JsonUnitTests.cs" />
-    <Content Include="targets\csharp\source\PlayFabSDK\source\Uunit\UUnitAssertException.cs" />
-    <Content Include="targets\csharp\source\PlayFabSDK\source\Uunit\UUnitIncrementalTestRunner.cs" />
-    <Content Include="targets\csharp\source\PlayFabSDK\source\Uunit\UUnitTestCase.cs" />
-    <Content Include="targets\csharp\source\PlayFabSDK\source\Uunit\UUnitTestContext.cs" />
-    <Content Include="targets\csharp\source\PlayFabSDK\source\Uunit\UUnitTestReport.cs" />
-    <Content Include="targets\csharp\source\PlayFabSDK\source\Uunit\UUnitTestSuite.cs" />
     <Content Include="targets\csharp\source\PlayFabSDK\source\WsaReflectionExtensions.cs" />
     <Content Include="targets\csharp\source\PlayFabSDK\UnittestRunner\App.config" />
     <Content Include="targets\csharp\source\PlayFabSDK\UnittestRunner\Properties\AssemblyInfo.cs" />
@@ -175,8 +158,14 @@
     <Content Include="targets\csharp\templates\Enum.cs.ejs" />
     <Content Include="targets\csharp\templates\Model.cs.ejs" />
     <Content Include="targets\csharp\templates\Models.cs.ejs" />
+    <Content Include="targets\csharp\templates\PlayFabEndpointApiTest.cs.ejs" />
     <Content Include="targets\csharp\templates\PlayFab_API.cs.ejs" />
+    <Content Include="targets\csharp\templates\PlayFab_Events_API.cs.ejs" />
+    <Content Include="targets\csharp\templates\PlayFab_Events_InstanceAPI.cs.ejs" />
+    <Content Include="targets\csharp\templates\PlayFab_Events_InstanceAPIInterface.cs.ejs" />
     <Content Include="targets\csharp\templates\PlayFab_InstanceAPI.cs.ejs" />
+    <Content Include="targets\csharp\templates\PlayFab_InstanceAPIInterface.cs.ejs" />
+    <Content Include="targets\csharp\templates\UUnitIncrementalTestRunner.cs.ejs" />
     <Content Include="targets\csharp\XamarinTestRunner\build_all.cmd" />
     <Content Include="targets\csharp\XamarinTestRunner\build_Android.cmd" />
     <Content Include="targets\csharp\XamarinTestRunner\build_iOS.cmd" />
@@ -942,14 +931,8 @@
     <Folder Include="targets\csharp\source\" />
     <Folder Include="targets\csharp\source\PlayFabSDK\" />
     <Folder Include="targets\csharp\source\PlayFabSDK\Properties\" />
-    <Folder Include="targets\csharp\source\PlayFabSDK\source\" />
-    <Folder Include="targets\csharp\source\PlayFabSDK\source\Json\" />
-    <Folder Include="targets\csharp\source\PlayFabSDK\source\PlayFabHttp\" />
     <Folder Include="targets\csharp\source\PlayFabSDK\source\Properties\" />
     <Folder Include="targets\csharp\source\PlayFabSDK\source\Qos\" />
-    <Folder Include="targets\csharp\source\PlayFabSDK\source\Uunit\" />
-    <Folder Include="targets\csharp\source\PlayFabSDK\source\Uunit\tests\" />
-    <Folder Include="targets\csharp\source\PlayFabSDK\source\Uunit\tests\Utility\" />
     <Folder Include="targets\csharp\source\PlayFabSDK\UnittestRunner\" />
     <Folder Include="targets\csharp\source\PlayFabSDK\UnittestRunner\Properties\" />
     <Folder Include="targets\csharp\source\PlayFabSDK\WindowsFormsApp1\" />
@@ -957,7 +940,6 @@
     <Folder Include="targets\csharp\source\Plugins\" />
     <Folder Include="targets\csharp\source\Plugins\CloudScript\" />
     <Folder Include="targets\csharp\source\Plugins\CloudScript\source\" />
-    <Folder Include="targets\csharp\templates\" />
     <Folder Include="targets\csharp\XamarinTestRunner\" />
     <Folder Include="targets\csharp\XamarinTestRunner\XamarinTestRunner\" />
     <Folder Include="targets\csharp\XamarinTestRunner\XamarinTestRunner\XamarinTestRunner.Android\" />
@@ -1184,6 +1166,10 @@
     <TypeScriptCompile Include="generate-sdk.ts" />
     <TypeScriptCompile Include="generate.ts" />
     <TypeScriptCompile Include="node.d.ts" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="targets\csharp\source\PlayFabSDK\source\Json\TextJsonSerializer.cs" />
+    <Compile Include="targets\csharp\source\PlayFabSDK\source\PlayFabHttp\PlayFabPollyHttp.cs" />
   </ItemGroup>
   <!-- Do not delete the following Import Project.  While this appears to do nothing it is a marker for setting TypeScript properties before our import that depends on them. -->
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\TypeScript\Microsoft.TypeScript.targets" Condition="False" />

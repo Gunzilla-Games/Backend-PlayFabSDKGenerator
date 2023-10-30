@@ -14,8 +14,9 @@ namespace PlayFab
 %>    public class PlayFab<%- api.name %>InstanceAPI : IPlayFab<%- api.name %>InstanceAPI 
     {
         public readonly PlayFabApiSettings? apiSettings = null;
-        public readonly PlayFabAuthenticationContext? authenticationContext = null;
 <% if( api.name === "Admin" || api.name === "Server" ) { %>
+        public readonly PlayFabAuthenticationContext? authenticationContext;
+            
         public PlayFab<%- api.name %>InstanceAPI() { }
 
         public PlayFab<%- api.name %>InstanceAPI(PlayFabApiSettings settings)
@@ -34,6 +35,8 @@ namespace PlayFab
             authenticationContext = context;
         }
 <% } else if( api.name === "Client" || api.name === "Authentication" ) { %>
+        public readonly PlayFabAuthenticationContext authenticationContext;
+            
         public PlayFab<%- api.name %>InstanceAPI()
         {
             authenticationContext = new PlayFabAuthenticationContext();
@@ -56,6 +59,8 @@ namespace PlayFab
             authenticationContext = context ?? new PlayFabAuthenticationContext();
         }
 <% } else { %>
+        public readonly PlayFabAuthenticationContext authenticationContext;
+            
         public PlayFab<%- api.name %>InstanceAPI(PlayFabAuthenticationContext context)
         {
             if (context == null)
@@ -107,6 +112,7 @@ namespace PlayFab
             var requestSettings = apiSettings ?? PlayFabSettings.staticSettings;
 <%- getRequestActions("            ", apiCall, true) %>
             var httpResult = await PlayFabHttp.DoPost<<%- apiCall.result %>>("<%- apiCall.url %>", request, <%- getAuthParams(apiCall, true) %>, extraHeaders, requestSettings);
+<%- getResultActions("            ", apiCall, api, true) %>
             httpResult.CustomData = customData;
             return httpResult;
         }

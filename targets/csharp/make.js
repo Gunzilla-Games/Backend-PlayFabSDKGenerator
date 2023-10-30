@@ -310,18 +310,28 @@ function getCustomApiLogic(tabbing, apiCall) {
 function getResultActions(tabbing, apiCall, api, isInstance) {
     if (isInstance) {
         if (apiCall.result === "LoginResult" || apiCall.result === "RegisterPlayFabUserResult")
-            return tabbing + "result.AuthenticationContext = new PlayFabAuthenticationContext(result.SessionTicket, result.EntityToken.EntityToken, result.PlayFabId, result.EntityToken.Entity.Id, result.EntityToken.Entity.Type);\n"
-                + tabbing + "authenticationContext.CopyFrom(result.AuthenticationContext);\n";
+            return tabbing + "if (httpResult.Result != null)\n"
+                + tabbing + "{\n"
+                + tabbing + "\tvar result = httpResult.Result;\n"
+                + tabbing + "\tresult.AuthenticationContext = new PlayFabAuthenticationContext(result.SessionTicket, result.EntityToken.EntityToken, result.PlayFabId, result.EntityToken.Entity.Id, result.EntityToken.Entity.Type);\n"
+                + tabbing + "\tauthenticationContext.CopyFrom(result.AuthenticationContext);\n"
+                + tabbing + "}\n";
         else if (apiCall.result === "AuthenticateIdentityResult")
-            return tabbing + "result.AuthenticationContext = new PlayFabAuthenticationContext(null, result.TitlePlayerAccount.EntityToken, null, result.TitlePlayerAccount.Entity.Id, result.TitlePlayerAccount.Entity.Type);\n"
-                + tabbing + "authenticationContext.CopyFrom(result.AuthenticationContext);\n";
+            return tabbing + "if (httpResult.Result != null)\n"
+                + tabbing + "{\n"
+                + tabbing + "\tvar result = httpResult.Result;\n"
+                + tabbing + "\tresult.AuthenticationContext = new PlayFabAuthenticationContext(null, result.TitlePlayerAccount.EntityToken, null, result.TitlePlayerAccount.Entity.Id, result.TitlePlayerAccount.Entity.Type);\n"
+                + tabbing + "\tauthenticationContext.CopyFrom(result.AuthenticationContext);\n"
+                + tabbing + "}\n";
         else if (apiCall.result === "GetEntityTokenResponse")
             return tabbing + "var updateContext = authenticationContext;\n"
+                + tabbing + "var result = httpResult.Result;\n"
                 + tabbing + "updateContext.EntityToken = result.EntityToken;\n"
                 + tabbing + "updateContext.EntityId = result.Entity.Id;\n"
                 + tabbing + "updateContext.EntityType = result.Entity.Type;\n";
         else if (apiCall.result === "AuthenticateCustomIdResult")
             return tabbing + "var updateContext = authenticationContext;\n"
+                + tabbing + "var result = httpResult.Result;\n"
                 + tabbing + "updateContext.EntityToken = result.EntityToken.EntityToken;\n"
                 + tabbing + "updateContext.EntityId = result.EntityToken.Entity.Id;\n"
                 + tabbing + "updateContext.EntityType = result.EntityToken.Entity.Type;\n";
